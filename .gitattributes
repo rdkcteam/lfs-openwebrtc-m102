@@ -1,2 +1,4 @@
 third_party/jdk/extras/java_8/jre/lib/rt.jar filter=lfs diff=lfs merge=lfs -text
 third_party/depot_tools/.cipd_bin/.cipd/pkgs/0/0EmvufYSO4poeyc4HK9_HG6wT2UYDY-72RKTc6hyt2QC/3.8/bin/python3 filter=lfs diff=lfs merge=lfs -text
+third_party/llvm-build/Release+Asserts/bin/clang filter=lfs diff=lfs merge=lfs -text
+third_party/llvm-build/Release+Asserts/bin/ld.lld filter=lfs diff=lfs merge=lfs -text
