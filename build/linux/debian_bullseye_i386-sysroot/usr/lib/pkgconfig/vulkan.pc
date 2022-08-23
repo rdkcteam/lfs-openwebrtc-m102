@@ -1,0 +1,12 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=/usr/lib/i386-linux-gnu
+includedir=/usr/include
+
+Name: Vulkan-Loader
+Description: Vulkan Loader
+Version: 1.2.182
+Libs: -L${libdir} -lvulkan
+Libs.private:  -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc
+Cflags: -I${includedir}
+
