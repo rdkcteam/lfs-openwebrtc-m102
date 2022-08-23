@@ -1,0 +1,2 @@
+third_party/llvm-build/Release+Asserts/bin/ld.lld filter=lfs diff=lfs merge=lfs -text
+third_party/llvm-build/Release+Asserts/bin/clang filter=lfs diff=lfs merge=lfs -text
