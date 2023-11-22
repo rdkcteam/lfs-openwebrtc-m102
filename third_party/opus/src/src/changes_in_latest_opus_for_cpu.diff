@@ -1,0 +1,83 @@
+diff --git a/third_party/opus/src/src/opus_encoder.c b/third_party/opus/src/src/opus_encoder.c
+index af5dda3ef..8a3d51903 100644
+--- a/third_party/opus/src/src/opus_encoder.c
++++ b/third_party/opus/src/src/opus_encoder.c
+@@ -220,12 +220,12 @@ int opus_encoder_init(OpusEncoder* st, opus_int32 Fs, int channels, int applicat
+     st->silk_mode.maxInternalSampleRate     = 16000;
+     st->silk_mode.minInternalSampleRate     = 8000;
+     st->silk_mode.desiredInternalSampleRate = 16000;
+-    st->silk_mode.payloadSize_ms            = 10;
+-    st->silk_mode.bitRate                   = 16000;
++    st->silk_mode.payloadSize_ms            = 20;
++    st->silk_mode.bitRate                   = 25000;
+     st->silk_mode.packetLossPercentage      = 0;
+-    st->silk_mode.complexity                = 4;
++    st->silk_mode.complexity                = 9;
+     st->silk_mode.useInBandFEC              = 0;
+-    st->silk_mode.useDTX                    = 1;
++    st->silk_mode.useDTX                    = 0;
+     st->silk_mode.useCBR                    = 0;
+     st->silk_mode.reducedDependency         = 0;
+ 
+@@ -242,16 +242,16 @@ int opus_encoder_init(OpusEncoder* st, opus_int32 Fs, int channels, int applicat
+     st->vbr_constraint = 1;
+     st->user_bitrate_bps = OPUS_AUTO;
+     st->bitrate_bps = 3000+Fs*channels;
+-    st->application = OPUS_APPLICATION_VOIP;//application;
++    st->application = application;
+     st->signal_type = OPUS_AUTO;
+-    st->user_bandwidth = OPUS_BANDWIDTH_WIDEBAND;
++    st->user_bandwidth = OPUS_AUTO;
+     st->max_bandwidth = OPUS_BANDWIDTH_FULLBAND;
+-    st->force_channels = 1;
+-    st->user_forced_mode = MODE_CELT_ONLY;
++    st->force_channels = OPUS_AUTO;
++    st->user_forced_mode = OPUS_AUTO;
+     st->voice_ratio = -1;
+     st->encoder_buffer = st->Fs/100;
+     st->lsb_depth = 24;
+-    st->variable_duration = OPUS_FRAMESIZE_10_MS;
++    st->variable_duration = OPUS_FRAMESIZE_ARG;
+ 
+     /* Delay compensation of 4 ms (2.5 ms for SILK's extra look-ahead
+        + 1.5 ms for SILK resamplers and stereo prediction) */
+@@ -261,8 +261,8 @@ int opus_encoder_init(OpusEncoder* st, opus_int32 Fs, int channels, int applicat
+     st->prev_HB_gain = Q15ONE;
+     st->variable_HP_smth2_Q15 = silk_LSHIFT( silk_lin2log( VARIABLE_HP_MIN_CUTOFF_HZ ), 8 );
+     st->first = 1;
+-    st->mode = MODE_CELT_ONLY;
+-    st->bandwidth = OPUS_BANDWIDTH_WIDEBAND;
++    st->mode = MODE_HYBRID;
++    st->bandwidth = OPUS_BANDWIDTH_FULLBAND;
+ 
+ #ifndef DISABLE_FLOAT_API
+     tonality_analysis_init(&st->analysis, st->Fs);
+@@ -612,7 +612,7 @@ void downmix_int(const void *_x, opus_val32 *y, int subframe, int offset, int c1
+ 
+ opus_int32 frame_size_select(opus_int32 frame_size, int variable_duration, opus_int32 Fs)
+ {
+-   
++
+    int new_size;
+    if (frame_size<Fs/400)
+       return -1;
+@@ -1125,9 +1125,9 @@ opus_int32 opus_encode_native(OpusEncoder *st, const opus_val16 *pcm, int frame_
+ #ifndef DISABLE_FLOAT_API
+     analysis_info.valid = 0;
+ #ifdef FIXED_POINT
+-    if (st->silk_mode.complexity >= 4 && st->Fs>=16000)
++    if (st->silk_mode.complexity >= 10 && st->Fs>=16000)
+ #else
+-    if (st->silk_mode.complexity >= 4 && st->Fs>=16000)
++    if (st->silk_mode.complexity >= 7 && st->Fs>=16000)
+ #endif
+     {
+        is_silence = is_digital_silence(pcm, frame_size, st->channels, lsb_depth);
+@@ -2226,7 +2226,6 @@ opus_int32 opus_encode(OpusEncoder *st, const opus_int16 *pcm, int analysis_fram
+ {
+    int frame_size;
+    frame_size = frame_size_select(analysis_frame_size, st->variable_duration, st->Fs);
+-   printf("\n--BALA :: frame_size_select frame_size  = %d and new_size = %d \n", analysis_frame_size, frame_size);
+    return opus_encode_native(st, pcm, frame_size, data, out_data_bytes, 16,
+                              pcm, analysis_frame_size, 0, -2, st->channels, downmix_int, 0);
+ }

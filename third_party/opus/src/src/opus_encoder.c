@@ -29,6 +29,7 @@
 #include "config.h"
 #endif
 
+#include <stdio.h>
 #include <stdarg.h>
 #include "celt.h"
 #include "entenc.h"
@@ -87,6 +88,7 @@ struct OpusEncoder {
     int          lfe;
     int          arch;
     int          use_dtx;                 /* general DTX for both SILK and CELT */
+    int          fec_config;
 #ifndef DISABLE_FLOAT_API
     TonalityAnalysisState analysis;
 #endif
@@ -610,6 +612,7 @@ void downmix_int(const void *_x, opus_val32 *y, int subframe, int offset, int c1
 
 opus_int32 frame_size_select(opus_int32 frame_size, int variable_duration, opus_int32 Fs)
 {
+
    int new_size;
    if (frame_size<Fs/400)
       return -1;
@@ -1314,6 +1317,8 @@ opus_int32 opus_encode_native(OpusEncoder *st, const opus_val16 *pcm, int frame_
         st->stream_channels = st->force_channels;
     } else {
 #ifdef FUZZING
+        (void)stereo_music_threshold;
+        (void)stereo_voice_threshold;
        /* Random mono/stereo decision */
        if (st->channels == 2 && (rand()&0x1F)==0)
           st->stream_channels = 3-st->stream_channels;
@@ -1352,6 +1357,8 @@ opus_int32 opus_encode_native(OpusEncoder *st, const opus_val16 *pcm, int frame_
     } else if (st->user_forced_mode == OPUS_AUTO)
     {
 #ifdef FUZZING
+        (void)stereo_width;
+        (void)mode_thresholds;
        /* Random mode switching */
        if ((rand()&0xF)==0)
        {
@@ -1389,8 +1396,9 @@ opus_int32 opus_encode_native(OpusEncoder *st, const opus_val16 *pcm, int frame_
 
        st->mode = (equiv_rate >= threshold) ? MODE_CELT_ONLY: MODE_SILK_ONLY;
 
-       /* When FEC is enabled and there's enough packet loss, use SILK */
-       if (st->silk_mode.useInBandFEC && st->silk_mode.packetLossPercentage > (128-voice_est)>>4)
+       /* When FEC is enabled and there's enough packet loss, use SILK.
+          Unless the FEC is set to 2, in which case we don't switch to SILK if we're confident we have music. */
+       if (st->silk_mode.useInBandFEC && st->silk_mode.packetLossPercentage > (128-voice_est)>>4 && (st->fec_config != 2 || voice_est > 25))
           st->mode = MODE_SILK_ONLY;
        /* When encoding voice and DTX is enabled but the generalized DTX cannot be used,
           use SILK in order to make use of its DTX. */
@@ -2439,11 +2447,12 @@ int opus_encoder_ctl(OpusEncoder *st, int request, ...)
         case OPUS_SET_INBAND_FEC_REQUEST:
         {
             opus_int32 value = va_arg(ap, opus_int32);
-            if(value<0 || value>1)
+            if(value<0 || value>2)
             {
                goto bad_arg;
             }
-            st->silk_mode.useInBandFEC = value;
+            st->fec_config = value;
+            st->silk_mode.useInBandFEC = (value != 0);
         }
         break;
         case OPUS_GET_INBAND_FEC_REQUEST:
@@ -2453,7 +2462,7 @@ int opus_encoder_ctl(OpusEncoder *st, int request, ...)
             {
                goto bad_arg;
             }
-            *value = st->silk_mode.useInBandFEC;
+            *value = st->fec_config;
         }
         break;
         case OPUS_SET_PACKET_LOSS_PERC_REQUEST:
